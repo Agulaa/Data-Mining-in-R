@@ -1,0 +1,64 @@
+---
+title: "Task-1"
+author: "Martyna Maciejewska, Agnieszka Rusin"
+date: "29 10 2020"
+output: html_document
+---
+
+
+```{r Wczytanie_danych, cache=TRUE, echo=FALSE, warning=FALSE, message=FALSE, include=FALSE}
+devtools::install_github("rstudio/EDAWR", force = TRUE)
+install.packages("ggplot2")
+library(ggplot2)
+library(EDAWR)
+library(dplyr)
+```
+
+### Wczytanie danych
+```{r, echo=FALSE}
+knitr::kable(head(tb))
+```
+
+
+### Podsumowanie danych
+```{r summary, echo=FALSE, warning=FALSE}
+knitr::kable(summary(tb))
+```
+
+### Liczba zachorowan ze wzgledu na plec
+```{r  echo=FALSE, warning=FALSE}
+aggregate(cbind(child, adult, elderly, total=rowSums(tb[4:6]))~sex, tb, sum)
+```
+### Sumaryczna liczba zachorowan wsrod dzieci, doroslych i osob starszych
+```{r  echo=FALSE, warning=FALSE}
+year_df <- aggregate(cbind(child, adult, elderly)~year, tb, sum) 
+
+colors <- c("Child" = "blue", "Adult" = "red", "Elderly" = "orange")
+ggplot(year_df, aes(x=year)) + 
+  geom_line(aes( y = child, color="Child")) +
+  geom_line( aes( y = adult, color="Adult")) +
+  geom_line( aes( y = elderly, color="Elderly")) +
+labs(x = "Year",
+         y = "Total sum",
+         color = "Legend")
+
+```
+
+### Sumaryczna liczba zachorowan wsrod dzieci, doroslych i osob starszych w poszczególnych krajach 
+```{r  echo=FALSE, warning=FALSE}
+
+all_country <- unique(tb[1])%>%pull()
+for (i in all_country){
+  current_countr_df <- filter(tb, country==i)
+  year_df <- aggregate(cbind(child, adult, elderly)~year, current_countr_df, sum) 
+colors <- c("Child" = "blue", "Adult" = "red", "Elderly" = "orange")
+plot <- ggplot(year_df, aes(x=year)) + 
+  geom_line(aes( y = child, color="Child")) +
+  geom_line( aes( y = adult, color="Adult")) +
+  geom_line( aes( y = elderly, color="Elderly")) +
+labs(x = "Year",
+         y = "Total sum",
+         color = "Legend", title = i)
+print(plot)
+}
+```
