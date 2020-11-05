@@ -1,0 +1,45 @@
+---
+title: "Task-2"
+author: "Martyna Maciejewska, Agnieszka Rusin"
+date: "05 11 2020"
+output: html_document
+---
+
+### Wyświetl histogram zmiennej depth
+
+```{r Wczytanie danych, cache=TRUE, warning=FALSE, message=FALSE}
+library(ggplot2)
+data("diamonds")
+qplot(depth, data = diamonds)
+```
+
+
+```{r summary, warning=FALSE, message=FALSE}
+qplot(depth, data = diamonds, xlim=c(55, 70), binwidth = 0.2)
+```
+
+
+```{r warning=FALSE, message=FALSE}
+qplot(depth, data = diamonds, xlim=c(55, 70), binwidth = 0.2) + facet_grid(~ cut)
+```
+
+```{r  warning=FALSE, message=FALSE}
+qplot(depth, data = diamonds, xlim=c(55, 70), binwidth = 0.2, color=cut) 
+```
+### Wyświetl histogram zmiennej price 
+```{r  warning=FALSE, message=FALSE}
+qplot(price, data = diamonds, xlim = c(0, 15000), binwidth = 20)
+qplot(price, data = diamonds, xlim = c(0, 15000), binwidth = 20, color=cut)
+qplot(price, data = diamonds, xlim = c(0, 15000), binwidth = 20) + facet_grid(~ cut)
+```
+
+
+### Zwizualizuj relację między zmiennymi carat i price
+```{r warning=FALSE, message=FALSE}
+install.packages("plotly")
+library(plotly)
+p <- ggplot(diamonds, aes(carat, price, color=clarity))+ geom_point()
+ggplotly(p)
+```
+
+
