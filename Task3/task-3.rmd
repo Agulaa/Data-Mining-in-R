@@ -1,0 +1,232 @@
+---
+title: "Task-3"
+author: "Martyna Maciejewska, Agnieszka Rusin"
+date: "05 11 2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+### Zaladuj zbiór danych
+```{r settings, echo=FALSE, warning=FALSE, message=FALSE}
+library(knitr)
+library(caret)
+library(ggplot2)
+library(modeldata)
+library(lattice)
+library(pROC)
+opts_chunk$set(warning=FALSE, message=FALSE)
+```
+
+
+```{r Wczytanie danych, load-packages, warning=FALSE, message=FALSE,cache=TRUE}
+
+data(mlc_churn)
+churnData <- data.frame(mlc_churn)
+head(churnData, 5)
+```
+
+
+```{r warning=FALSE}
+summary(churnData)
+```
+
+### Podziel zbiór na uczący i testowy
+
+```{r warning=FALSE}
+set.seed(23)
+inTraining <-
+    createDataPartition(
+        y = churnData$churn,
+        p = .75,
+        list = FALSE)
+
+training <- churnData[ inTraining,]
+testing  <- churnData[-inTraining,]
+print(dim(churnData))
+print(dim(training))
+print(dim(testing))
+```
+
+### Schemat uczenia
+```{r warning=FALSE}
+ctrl <- trainControl(
+    method = "repeatedcv",
+    classProbs = TRUE,
+    number = 2,
+    repeats = 5, 
+    summaryFunction = twoClassSummary)
+```
+
+### Klasyfikator CART (Classification And Regression Tree)
+Parametr complexity  (cp) - pozwala kontrolowac rozmiar drzewa decyzyjnego, kara za zlożonosc drzewa. cp = 0 drzewo pelne, cp dąży do nieskończoności - sam korzen.
+
+Wartosc accuracy sprawdzana jest dla nastepujacych wartosci parametru cp: 0.001, 0.005, 0.01, 0.05, 0.1, 0.5
+```{r warning=FALSE}
+set.seed(23)
+grid <- expand.grid(.cp = c(0.001, 0.005, 0.01, 0.05, 0.1, 0.5))
+classifier_cart <- train(churn ~ .,
+             data = training,
+             method = "rpart",
+             trControl = ctrl, 
+             tuneGrid = grid, 
+                  metric = "ROC")
+classifier_cart
+```
+
+## Wyniki na zbiorze testowym 
+```{r }
+rfClasses <- predict(classifier_cart, newdata = testing)
+confusionMatrix(data = rfClasses, testing$churn)
+```
+## Czy warto wstępnie przetworzyć zbiór ? 
+ - W przypadku drzew standaryzacja danych nie powinna znaczaco wpywac na wyniki
+```{r warning=FALSE}
+set.seed(23)
+grid <- expand.grid(.cp = c(0.001, 0.005, 0.01, 0.05, 0.1, 0.5))
+classifier_cart <- train(churn ~ .,
+             data = training,
+             method = "rpart",
+            preProc = c("center", "scale"),
+             trControl = ctrl, 
+             tuneGrid = grid, 
+            metric="ROC")
+classifier_cart
+```
+Wartosci ROC po znormalizowaniu danych nie poprawily sie. 
+```{r }
+rfClasses <- predict(classifier_cart, newdata = testing)
+confusionMatrix(data = rfClasses, testing$churn)
+```
+
+### Klasyfikator SVM
+Parametr C pozwala konrolować rozmiar marginesu deczji wraz ze wzrostem C maleje margines decyzji
+
+Parametr sigma decyduje o szybkości padania wartości funkcji jądra i jest wyższy tym wariancja rozkładu jest wyższa więc jądro wolniej spada
+
+```{r warning=FALSE}
+set.seed(23)
+grid <- expand.grid(sigma =  c(0.001, 0.01, 0.1), C=c(0.1, 0.5, 1,5)) 
+classifier_svm <- train(churn ~ .,
+             data = training,
+             method = "svmRadial",
+             metric = "ROC",
+             trControl = ctrl,
+             tuneGrid = grid)
+classifier_svm
+```
+```{r }
+rfClasses <- predict(classifier_svm, newdata = testing)
+confusionMatrix(data = rfClasses, testing$churn)
+```
+
+
+## Klasyfikator SVM wraz z preprocessingiem 
+
+```{r warning=FALSE}
+set.seed(23)
+grid <- expand.grid(sigma =  c(0.001, 0.01, 0.1), C=c(0.1, 0.5, 1,5))  
+classifier_svm <- train(churn ~ .,
+             data = training,
+             method = "svmRadial",
+             preProc = c("range"),
+             metric = "ROC",
+             trControl = ctrl,
+             tuneGrid = grid)
+classifier_svm
+```
+
+```{r }
+rfClasses <- predict(classifier_svm, newdata = testing)
+confusionMatrix(data = rfClasses, testing$churn)
+```
+Wartosci ROC po znormalizowaniu danych nie zmienily sie. 
+
+
+## Porównanie dwóch algorytmów za pomocą wykresu 
+
+```{r }
+
+rfTuneProbs1 <- predict(classifier_cart,
+                       newdata = testing,
+                       type="prob")
+rfTuneProbs2 <- predict(classifier_svm,
+                       newdata = testing,
+                       type="prob")
+rocCurve1 <- roc(response = testing$churn,
+                predictor = rfTuneProbs1[, "yes"],
+                levels = rev(levels(testing$churn)))
+
+
+rocCurve2 <- roc(response = testing$churn,
+                predictor = rfTuneProbs2[, "yes"],
+                levels = rev(levels(testing$churn)))
+plot(rocCurve1, col='red') 
+plot( rocCurve2, add=TRUE, col='blue')
+legend("topleft", c("CART","SVM"), fill=c("red","blue")
+)
+
+```
+
+
+
+# Regresja 
+```{r}
+data(diamonds)
+df <- data.frame(diamonds)
+head(df, 5)
+```
+
+```{r}
+set.seed(23)
+
+data(diamonds)
+df <- data.frame(diamonds)
+
+inTraining <-
+    createDataPartition(
+        y = df$price,
+        p = .70,
+        list = FALSE)
+
+training <- df[ inTraining,]
+testing  <- df[-inTraining,]
+```
+
+```{r}
+set.seed(23)
+
+ctrl <- trainControl(
+    method = "repeatedcv",
+    number = 2,
+    repeats = 5)
+
+
+classifier_lm <- train(price ~ .,
+             data = training,
+             method = "lm",
+             trControl = ctrl)
+classifier_lm
+```
+### Predykcja
+```{r}
+x_test <- diamonds[, names(df) != 'price']
+y_test <- diamonds$price
+predictions <- predict(classifier_lm, x_test)
+RMSE(predictions, y_test)
+```
+### Wpływ zmiennych na cenę diamentu
+```{r}
+theme1 <- trellis.par.get()
+theme1$plot.symbol$col = rgb(.2, .2, .2, .4)
+theme1$plot.symbol$pch = 16
+theme1$plot.line$col = rgb(1, 0, 0, .7)
+theme1$plot.line$lwd <- 2
+trellis.par.set(theme1)
+
+col <- c("carat", "depth", "table", "x", "y", "z")
+featurePlot(x = diamonds[, col], 
+            y = diamonds$price, 
+            plot = "scatter", 
+            layout = c(6, 1))
+```
