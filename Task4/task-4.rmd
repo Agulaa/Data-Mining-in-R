@@ -1,0 +1,196 @@
+---
+title: "task-4"
+author: "Martyna Maciejewska, Agnieszka Rusin"
+date: "11/26/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+```{r settings, echo=FALSE, warning=FALSE, message=FALSE}
+library(factoextra)
+library(fpc)
+library(NbClust)
+
+```
+
+### Wczytanie danych 
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+set.seed(23)
+face <- rFace(1000, p=2, dMoNo=3)
+df = data.frame(x=face[,1], y=face[,2])
+labels = as.integer(attr(face,"grouping"))
+```
+
+### Wyświetlenie danych 
+```{r warning=FALSE, message=FALSE}
+head(df)
+```
+
+# Algorytm kMean 
+
+### Ustalenie liczby k dla algorytmu kMeans
+```{r }
+wss <- (nrow(df)-1)*sum(apply(df,2,var))
+for (i in 2:15) 
+  wss[i] <- sum(kmeans(df,
+                centers=i)$withinss)
+wssDf = data.frame(n=1:15, wss=wss)
+ggplot(wssDf, aes(n, wss)) + geom_point() + 
+    geom_line() + theme_minimal()
+```
+
+
+Z wykresu widać, że najlepszą wartością będzie k=3. 
+
+
+```{r }
+km  <- eclust(df, "kmeans", k=3)
+```
+### Jakość skupień 
+```{r }
+fviz_silhouette(km)
+```
+
+
+
+### Macierz pomyłek dla kMeans
+```{r }
+table(labels, km$cluster)
+```
+
+
+### Wizualizacja danych 
+```{r }
+predicted <- km$cluster
+ggplot(df, aes(x, y, color=factor(predicted))) + 
+    geom_point() + 
+    theme_bw()
+
+```
+Z macierzy pomyłek wynika że dane są podzielone na 6 skupień. Dla porównania sprawdzimy jak działa algorytm z paramertrem k=6.
+
+```{r }
+km  <- eclust(df, "kmeans", k=6)
+```
+```{r }
+fviz_silhouette(km)
+```
+```{r }
+table(labels, km$cluster)
+```
+```{r }
+predicted <- km$cluster
+ggplot(df, aes(x, y, color=factor(predicted))) + 
+    geom_point() + 
+    theme_bw()
+
+```
+Z miary Silhouette i wizualizacji wynika, że algorytm k-means lepiej dzieli dane na 3 skupiska. 
+
+
+# Algorytm k-medoidów 
+```{r }
+ pam_clust<- eclust(df, "pam", k = 3)
+```
+
+
+### Jakość skupień 
+```{r }
+fviz_silhouette(pam_clust)
+```
+
+
+### Macierz pomyłek 
+```{r }
+
+table(labels, pam_clust$cluster)
+```
+
+
+### Wizualizacja danych 
+```{r }
+predicted <- pam_clust$cluster
+ggplot(df, aes(x, y, color=factor(predicted))) + 
+    geom_point() + 
+    theme_bw()
+```
+Dla porównania sprawdzmay wyniki algorytmu k-medoidów dla sześciu skupień.
+
+```{r }
+km  <- eclust(df, "pam", k=6)
+```
+```{r }
+fviz_silhouette(km)
+```
+```{r }
+table(labels, km$cluster)
+```
+```{r }
+predicted <- km$cluster
+ggplot(df, aes(x, y, color=factor(predicted))) + 
+    geom_point() + 
+    theme_bw()
+
+```
+
+Wyniki obu algorytmów dla k = 3 są bardzo zbliżone. Dla k = 6 algorytmy inaczej pogrupowały dane. Dla k = 6 miara Silhouette jest wyższa dla algorytmu k-means.
+
+
+# Algorytm AHC 
+```{r }
+hc_clas <- eclust(df, "hclust", k=3, hc_metric = "euclidean")
+fviz_dend(hc_clas, show_labels = F, palette = "jco", as.ggplot = T)
+```
+
+
+### Jakość skupień 
+```{r }
+fviz_silhouette(hc_clas)
+```
+
+
+### Macierz pomyłek 
+```{r }
+table(labels, hc_clas$cluster)
+```
+
+
+### Wizualizacja danych 
+```{r }
+predicted <- hc_clas$cluster
+ggplot(df, aes(x, y, color=factor(predicted))) + 
+    geom_point() + 
+    theme_bw()
+```
+
+Dla porównania sprawdzmay wyniki algorytmu AHC dla sześciu skupień.
+
+```{r }
+hc_clas <- eclust(df, "hclust", k=6, hc_metric = "euclidean")
+fviz_dend(hc_clas, show_labels = F, palette = "jco", as.ggplot = T)
+```
+
+
+### Jakość skupień 
+```{r }
+fviz_silhouette(hc_clas)
+```
+
+
+### Macierz pomyłek 
+```{r }
+table(labels, hc_clas$cluster)
+```
+
+
+### Wizualizacja danych 
+```{r }
+predicted <- hc_clas$cluster
+ggplot(df, aes(x, y, color=factor(predicted))) + 
+    geom_point() + 
+    theme_bw()
+```
+Miara Silhouette jest nieznacznie wyższa dla algorytmu AHC z parametrem k = 3.
+
+Podsumowując wszystkie trzy algorytmy działają bardzo podobnie dla k=3. Algorytm k-means daje najwyższy wynik miary Silhouette jeśli grupowanie następuje do 6 skupisk.
+
